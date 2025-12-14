@@ -1,0 +1,9 @@
+# Dependency directory
+node_modules/
+
+# Build artifacts
+dist/
+
+# Environment variables
+.env
+.env.*

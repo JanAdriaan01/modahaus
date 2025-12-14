@@ -169,7 +169,10 @@ const Footer: React.FC = () => {
             <div className="mt-6">
               <h4 className="text-sm font-semibold mb-2">Newsletter</h4>
               <form className="flex">
+                <label htmlFor="newsletter-email-footer" className="sr-only">Enter your email</label>
                 <input
+                  id="newsletter-email-footer"
+                  name="newsletter-email"
                   type="email"
                   placeholder="Enter your email"
                   className="flex-1 px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-l-lg text-sm focus:outline-none focus:border-primary-500"
