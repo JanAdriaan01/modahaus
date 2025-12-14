@@ -16,7 +16,8 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "moduleResolution": "node",
-    "allowSyntheticDefaultImports": true
+    "allowSyntheticDefaultImports": true,
+    "types": ["compression"]
   },
   "include": [
     "src/**/*"
