@@ -1,5 +1,5 @@
 /// <reference types="vite/client" />
-import axios, { AxiosRequestConfig } from 'axios';
+import axios from 'axios';
 import { useAuthStore } from '@/store/authStore';
 
 const api = axios.create({
@@ -12,15 +12,17 @@ const api = axios.create({
 
 // Attach JWT token
 api.interceptors.request.use(
-  (config: AxiosRequestConfig) => {
+  (config) => {
     const token = useAuthStore.getState().token;
+
+    // Ensure headers object exists and is properly typed
+    config.headers = config.headers ?? {};
+
     if (token) {
-      // Use proper headers typing
-      if (!config.headers) {
-        config.headers = {} as AxiosRequestConfig['headers'];
-      }
-      config.headers['Authorization'] = `Bearer ${token}`;
+      // AxiosHeaders requires string type
+      (config.headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
     }
+
     return config;
   },
   (error) => Promise.reject(error)
