@@ -1,26 +1,23 @@
-/// <reference types="vite/client" />
-import axios from 'axios';
+import axios, { InternalAxiosRequestConfig } from 'axios';
 import { useAuthStore } from '@/store/authStore';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
+  baseURL:
+    import.meta.env.VITE_API_BASE_URL ??
+    'https://api.modahaus.co.za/api', // ← CHANGE to your real backend URL
   timeout: 10000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  withCredentials: true,
 });
 
-// Attach JWT token
+/**
+ * Attach JWT token safely (Axios v1+ compatible)
+ */
 api.interceptors.request.use(
-  (config) => {
+  (config: InternalAxiosRequestConfig) => {
     const token = useAuthStore.getState().token;
 
-    // Ensure headers object exists and is properly typed
-    config.headers = config.headers ?? {};
-
     if (token) {
-      // AxiosHeaders requires string type
-      (config.headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
+      config.headers.set('Authorization', `Bearer ${token}`);
     }
 
     return config;
@@ -28,7 +25,9 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Handle auth errors safely
+/**
+ * Handle auth expiration safely
+ */
 api.interceptors.response.use(
   (response) => response,
   (error) => {

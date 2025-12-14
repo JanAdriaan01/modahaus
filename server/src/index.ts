@@ -12,7 +12,6 @@ import { Database } from './config/database';
 import { errorHandler } from './middleware/errorHandler';
 import { authMiddleware } from './middleware/auth';
 
-// Route builders
 import authRoutesBuilder from './routes/auth';
 import productRoutesBuilder from './routes/products';
 import categoryRoutesBuilder from './routes/categories';
@@ -22,7 +21,12 @@ import wishlistRoutesBuilder from './routes/wishlist';
 import cartRoutesBuilder from './routes/cart';
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = Number(process.env.PORT) || 5000;
+
+/* =========================
+   Trust Proxy (REQUIRED)
+========================= */
+app.set('trust proxy', 1);
 
 // Initialize database
 const db = new Database();
@@ -31,7 +35,6 @@ async function startServer() {
   try {
     await db.init();
 
-    // Build routes
     const authRoutes = authRoutesBuilder(db);
     const productRoutes = productRoutesBuilder(db);
     const categoryRoutes = categoryRoutesBuilder(db);
@@ -41,7 +44,7 @@ async function startServer() {
     const cartRoutes = cartRoutesBuilder(db);
 
     /* =========================
-       Security Middleware
+       Security (Helmet)
     ========================= */
 
     app.use(
@@ -49,18 +52,16 @@ async function startServer() {
         contentSecurityPolicy: {
           directives: {
             defaultSrc: ["'self'"],
-            styleSrc: [
-              "'self'",
-              "'unsafe-inline'",
-              'https://fonts.googleapis.com'
-            ],
+            styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
             fontSrc: ["'self'", 'https://fonts.gstatic.com'],
             imgSrc: ["'self'", 'data:', 'https:', 'blob:'],
             scriptSrc: ["'self'"],
             connectSrc: [
               "'self'",
               'http://localhost:5000',
-              'http://localhost:5173'
+              'http://localhost:5173',
+              'https://www.modahaus.co.za',
+              'https://modahausclient.vercel.app'
             ],
             frameAncestors: ["'self'"]
           }
@@ -82,12 +83,25 @@ async function startServer() {
     );
 
     /* =========================
-       CORS
+       CORS (MULTI-ORIGIN SAFE)
     ========================= */
+
+    const allowedOrigins = [
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'https://www.modahaus.co.za',
+      'https://modahausclient.vercel.app'
+    ];
 
     app.use(
       cors({
-        origin: process.env.APP_ORIGIN || 'http://localhost:5173',
+        origin: (origin, callback) => {
+          if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+          } else {
+            callback(new Error('CORS not allowed'));
+          }
+        },
         credentials: true
       })
     );
@@ -132,7 +146,7 @@ async function startServer() {
     app.use('/api/cart', authMiddleware, cartRoutes);
 
     /* =========================
-       404 Handler
+       404
     ========================= */
 
     app.use('*', (req, res) => {
@@ -142,15 +156,11 @@ async function startServer() {
       });
     });
 
-    /* =========================
-       Error Handler
-    ========================= */
-
     app.use(errorHandler);
 
     app.listen(PORT, () => {
-      console.log(`🚀 Modahaus Server running on http://localhost:${PORT}`);
-      console.log(`📦 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`🚀 Modahaus API running on port ${PORT}`);
+      console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
     });
   } catch (error) {
     console.error('❌ Failed to start server:', error);
