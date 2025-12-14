@@ -31,7 +31,7 @@ export class Database {
   }
 
   private async initTables(): Promise<void> {
-    // Users
+    // Users table
     await this.run(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
@@ -46,7 +46,7 @@ export class Database {
       )
     `);
 
-    // Categories
+    // Categories table
     await this.run(`
       CREATE TABLE IF NOT EXISTS categories (
         id SERIAL PRIMARY KEY,
@@ -63,7 +63,7 @@ export class Database {
       )
     `);
 
-    // Products
+    // Products table
     await this.run(`
       CREATE TABLE IF NOT EXISTS products (
         id SERIAL PRIMARY KEY,
@@ -96,7 +96,7 @@ export class Database {
       )
     `);
 
-    // Product images
+    // Product images table
     await this.run(`
       CREATE TABLE IF NOT EXISTS product_images (
         id SERIAL PRIMARY KEY,
@@ -110,7 +110,7 @@ export class Database {
       )
     `);
 
-    // Addresses
+    // Addresses table
     await this.run(`
       CREATE TABLE IF NOT EXISTS addresses (
         id SERIAL PRIMARY KEY,
@@ -133,7 +133,7 @@ export class Database {
       )
     `);
 
-    // Orders
+    // Orders table
     await this.run(`
       CREATE TABLE IF NOT EXISTS orders (
         id SERIAL PRIMARY KEY,
@@ -160,7 +160,7 @@ export class Database {
       )
     `);
 
-    // Order items
+    // Order items table
     await this.run(`
       CREATE TABLE IF NOT EXISTS order_items (
         id SERIAL PRIMARY KEY,
@@ -177,7 +177,7 @@ export class Database {
       )
     `);
 
-    // Wishlist
+    // Wishlist table
     await this.run(`
       CREATE TABLE IF NOT EXISTS wishlist (
         id SERIAL PRIMARY KEY,
@@ -190,7 +190,7 @@ export class Database {
       )
     `);
 
-    // Cart items
+    // Cart items table
     await this.run(`
       CREATE TABLE IF NOT EXISTS cart_items (
         id SERIAL PRIMARY KEY,
@@ -205,7 +205,7 @@ export class Database {
       )
     `);
 
-    // Reviews
+    // Reviews table
     await this.run(`
       CREATE TABLE IF NOT EXISTS reviews (
         id SERIAL PRIMARY KEY,
@@ -226,7 +226,7 @@ export class Database {
       )
     `);
 
-    // Refunds
+    // Refunds table
     await this.run(`
       CREATE TABLE IF NOT EXISTS refunds (
         id SERIAL PRIMARY KEY,
@@ -251,38 +251,38 @@ export class Database {
     console.log('✅ Database tables created successfully');
   }
 
+  /** INSERT/UPDATE/DELETE */
   public async run(
     sql: string,
     params: any[] = []
   ): Promise<{ changes: number; lastID: number }> {
     const client = await this.pool.connect();
     try {
-      const result: QueryResult = await client.query(sql, params);
-      let lastID = 0;
-      if (result.command === 'INSERT' && result.rows.length > 0 && 'id' in result.rows[0]) {
-        lastID = (result.rows[0] as any).id;
-      }
+      const result: QueryResult<QueryResultRow> = await client.query(sql, params);
+      const lastID = result.rows[0]?.id ?? 0; // ensures number, not null
       return { changes: result.rowCount, lastID };
     } finally {
       client.release();
     }
   }
 
+  /** Fetch single row */
   public async get<T = any>(sql: string, params: any[] = []): Promise<T | undefined> {
     const client = await this.pool.connect();
     try {
-      const result: QueryResult<T> = await client.query(sql, params);
-      return result.rows[0];
+      const result = await client.query(sql, params); // QueryResult<QueryResultRow>
+      return result.rows[0] as unknown as T;
     } finally {
       client.release();
     }
   }
 
+  /** Fetch multiple rows */
   public async all<T = any>(sql: string, params: any[] = []): Promise<T[]> {
     const client = await this.pool.connect();
     try {
-      const result: QueryResult<T> = await client.query(sql, params);
-      return result.rows;
+      const result = await client.query(sql, params);
+      return result.rows as unknown as T[];
     } finally {
       client.release();
     }
