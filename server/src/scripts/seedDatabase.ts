@@ -298,7 +298,7 @@ const sampleProducts = [
     brand: 'Modahaus',
     weight: 2.1,
     dimensions: '35cm H x 20cm W',
-    color: 'White/Gold',
+    color: 'White',
     material: 'Ceramic, Fabric',
     is_featured: true,
     images: [
@@ -320,7 +320,7 @@ const sampleProducts = [
     brand: 'Modahaus',
     weight: 8.5,
     dimensions: '200cm L x 300cm W',
-    color: 'Red/Gold',
+    color: 'Red',
     material: 'Wool Blend',
     is_featured: true,
     images: [
@@ -402,10 +402,19 @@ async function seedDatabase() {
 
     // Clear existing data to prevent unique constraint errors on re-seeding
     console.log('🧹 Clearing existing data...');
-    await db.run('DELETE FROM product_images');
-    await db.run('DELETE FROM products');
-    await db.run('DELETE FROM categories');
-    console.log('✅ Existing data cleared.');
+    // TRUNCATE tables that have foreign key dependencies first
+    await db.run('TRUNCATE TABLE product_images CASCADE');
+    await db.run('TRUNCATE TABLE reviews CASCADE');
+    await db.run('TRUNCATE TABLE order_items CASCADE');
+    await db.run('TRUNCATE TABLE orders CASCADE');
+    await db.run('TRUNCATE TABLE cart_items CASCADE');
+    await db.run('TRUNCATE TABLE wishlist CASCADE');
+    await db.run('TRUNCATE TABLE addresses CASCADE');
+    await db.run('TRUNCATE TABLE products CASCADE');
+    await db.run('TRUNCATE TABLE categories CASCADE');
+    await db.run('TRUNCATE TABLE users CASCADE');
+
+    console.log('✅ Existing data cleared and serial sequences reset.');
 
     // Insert categories
     console.log('📂 Inserting categories...');
@@ -420,7 +429,8 @@ async function seedDatabase() {
     for (const category of mainCategories) {
       const result = await db.run(`
         INSERT INTO categories (name, slug, description, parent_id, image_url, sort_order)
-        VALUES (?, ?, ?, ?, ?, ?)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING id
       `, [
         category.name,
         category.slug,
@@ -441,7 +451,8 @@ async function seedDatabase() {
 
       const result = await db.run(`
         INSERT INTO categories (name, slug, description, parent_id, image_url, sort_order)
-        VALUES (?, ?, ?, ?, ?, ?)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING id
       `, [
         category.name,
         category.slug,
@@ -466,7 +477,8 @@ async function seedDatabase() {
           name, slug, description, short_description, sku, price, compare_at_price,
           stock_quantity, category_id, brand, weight, dimensions, color, material,
           is_featured
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+        RETURNING id
       `, [
         product.name,
         product.slug,
@@ -482,7 +494,7 @@ async function seedDatabase() {
         product.dimensions,
         product.color,
         product.material,
-        product.is_featured ? 1 : 0
+        product.is_featured // Boolean values for PostgreSQL
       ]);
 
       const productId = result.lastID;
@@ -491,12 +503,12 @@ async function seedDatabase() {
       for (const image of product.images) {
         await db.run(`
           INSERT INTO product_images (product_id, image_url, alt_text, is_primary, sort_order)
-          VALUES (?, ?, ?, ?, ?)
+          VALUES ($1, $2, $3, $4, $5)
         `, [
           productId,
           image.url,
           image.alt,
-          image.is_primary ? 1 : 0,
+          image.is_primary, // Boolean values for PostgreSQL
           0
         ]);
       }
