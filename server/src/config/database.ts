@@ -1,4 +1,4 @@
-import { Pool, QueryResult } from 'pg';
+import { Pool, QueryResult, QueryResultRow } from 'pg';
 import path from 'path';
 
 export class Database {
@@ -7,7 +7,10 @@ export class Database {
   constructor() {
     this.pool = new Pool({
       connectionString: process.env.DATABASE_URL,
-      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false, // Required for Neon.tech in production
+      ssl:
+        process.env.NODE_ENV === 'production'
+          ? { rejectUnauthorized: false }
+          : false, // Required for Neon in production
     });
 
     this.pool.on('error', (err) => {
@@ -21,7 +24,6 @@ export class Database {
       await this.pool.connect();
       console.log('✅ Connected to PostgreSQL database');
       await this.initTables();
-      // await this.initForeignKeys(); // Foreign keys are enabled by default in PostgreSQL
     } catch (err) {
       console.error('Error connecting to or initializing database:', err);
       throw err;
@@ -29,7 +31,7 @@ export class Database {
   }
 
   private async initTables(): Promise<void> {
-    // Users table
+    // Users
     await this.run(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
@@ -44,7 +46,7 @@ export class Database {
       )
     `);
 
-    // Categories table
+    // Categories
     await this.run(`
       CREATE TABLE IF NOT EXISTS categories (
         id SERIAL PRIMARY KEY,
@@ -61,7 +63,7 @@ export class Database {
       )
     `);
 
-    // Products table
+    // Products
     await this.run(`
       CREATE TABLE IF NOT EXISTS products (
         id SERIAL PRIMARY KEY,
@@ -94,7 +96,7 @@ export class Database {
       )
     `);
 
-    // Product images table
+    // Product images
     await this.run(`
       CREATE TABLE IF NOT EXISTS product_images (
         id SERIAL PRIMARY KEY,
@@ -108,7 +110,7 @@ export class Database {
       )
     `);
 
-    // Addresses table
+    // Addresses
     await this.run(`
       CREATE TABLE IF NOT EXISTS addresses (
         id SERIAL PRIMARY KEY,
@@ -131,7 +133,7 @@ export class Database {
       )
     `);
 
-    // Orders table
+    // Orders
     await this.run(`
       CREATE TABLE IF NOT EXISTS orders (
         id SERIAL PRIMARY KEY,
@@ -158,7 +160,7 @@ export class Database {
       )
     `);
 
-    // Order items table
+    // Order items
     await this.run(`
       CREATE TABLE IF NOT EXISTS order_items (
         id SERIAL PRIMARY KEY,
@@ -175,7 +177,7 @@ export class Database {
       )
     `);
 
-    // Wishlist table
+    // Wishlist
     await this.run(`
       CREATE TABLE IF NOT EXISTS wishlist (
         id SERIAL PRIMARY KEY,
@@ -188,7 +190,7 @@ export class Database {
       )
     `);
 
-    // Cart items table (for persistent cart)
+    // Cart items
     await this.run(`
       CREATE TABLE IF NOT EXISTS cart_items (
         id SERIAL PRIMARY KEY,
@@ -203,7 +205,7 @@ export class Database {
       )
     `);
 
-    // Reviews table
+    // Reviews
     await this.run(`
       CREATE TABLE IF NOT EXISTS reviews (
         id SERIAL PRIMARY KEY,
@@ -224,7 +226,7 @@ export class Database {
       )
     `);
 
-    // Refunds table
+    // Refunds
     await this.run(`
       CREATE TABLE IF NOT EXISTS refunds (
         id SERIAL PRIMARY KEY,
@@ -249,20 +251,18 @@ export class Database {
     console.log('✅ Database tables created successfully');
   }
 
-  public async run(sql: string, params: any[] = []): Promise<{ changes: number; lastID: number }> {
+  public async run(
+    sql: string,
+    params: any[] = []
+  ): Promise<{ changes: number; lastID: number }> {
     const client = await this.pool.connect();
     try {
       const result: QueryResult = await client.query(sql, params);
-      // For INSERT statements, 'lastID' equivalent is typically result.rows[0].id if 'RETURNING id' is used.
-      // For simplicity, we'll return a placeholder or infer if possible.
-      // The original sqlite3 'run' returned `changes` and `lastID`.
-      // PostgreSQL doesn't directly provide lastID without 'RETURNING'.
-      // For DML statements that modify data, `rowCount` is `changes`.
       let lastID = 0;
-      if (result.command === 'INSERT' && result.rows.length > 0 && result.rows[0].id) {
-        lastID = result.rows[0].id;
+      if (result.command === 'INSERT' && result.rows.length > 0 && 'id' in result.rows[0]) {
+        lastID = (result.rows[0] as any).id;
       }
-      return { changes: result.rowCount, lastID: lastID };
+      return { changes: result.rowCount, lastID };
     } finally {
       client.release();
     }
@@ -293,4 +293,3 @@ export class Database {
     console.log('🔒 Database connection pool closed');
   }
 }
-
