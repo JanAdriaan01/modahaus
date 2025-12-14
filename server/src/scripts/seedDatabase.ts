@@ -400,10 +400,25 @@ async function seedDatabase() {
     console.log('🌱 Starting database seeding...');
     await db.init(); // Initialize the database connection and tables
 
+    // Clear existing data to prevent unique constraint errors on re-seeding
+    console.log('🧹 Clearing existing data...');
+    await db.run('DELETE FROM product_images');
+    await db.run('DELETE FROM products');
+    await db.run('DELETE FROM categories');
+    console.log('✅ Existing data cleared.');
+
     // Insert categories
     console.log('📂 Inserting categories...');
-    for (const category of sampleCategories) {
-      await db.run(`
+    const categoryIdMap: { [slug: string]: number } = {};
+    const productCategoryIdMap: { [categoryIndex: number]: number } = {};
+
+    // Separate main categories (parent_id is null) and subcategories
+    const mainCategories = sampleCategories.filter(cat => cat.parent_id === null);
+    const subCategories = sampleCategories.filter(cat => cat.parent_id !== null);
+
+    // Insert main categories and build a map of their slugs to their actual database IDs
+    for (const category of mainCategories) {
+      const result = await db.run(`
         INSERT INTO categories (name, slug, description, parent_id, image_url, sort_order)
         VALUES (?, ?, ?, ?, ?, ?)
       `, [
@@ -414,12 +429,38 @@ async function seedDatabase() {
         category.image_url,
         category.sort_order
       ]);
+      categoryIdMap[category.slug] = result.lastID;
+      // Also map original index to new ID for products
+      productCategoryIdMap[sampleCategories.indexOf(category)] = result.lastID;
+    }
+
+    // Insert subcategories, updating parent_id using the map
+    for (const category of subCategories) {
+      const parentCategory = sampleCategories[category.parent_id! -1]; // Get original parent category object
+      const actualParentId = categoryIdMap[parentCategory.slug]; // Get the actual ID from the DB
+
+      const result = await db.run(`
+        INSERT INTO categories (name, slug, description, parent_id, image_url, sort_order)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `, [
+        category.name,
+        category.slug,
+        category.description,
+        actualParentId,
+        category.image_url,
+        category.sort_order
+      ]);
+      categoryIdMap[category.slug] = result.lastID;
+      // Also map original index to new ID for products
+      productCategoryIdMap[sampleCategories.indexOf(category)] = result.lastID;
     }
     console.log(`✅ Inserted ${sampleCategories.length} categories`);
 
     // Insert products
     console.log('🛍️ Inserting products...');
     for (const product of sampleProducts) {
+      // Use the mapped category_id
+      const actualCategoryId = productCategoryIdMap[product.category_id! -1];
       const result = await db.run(`
         INSERT INTO products (
           name, slug, description, short_description, sku, price, compare_at_price,
@@ -435,7 +476,7 @@ async function seedDatabase() {
         product.price,
         product.compare_at_price,
         product.stock_quantity,
-        product.category_id,
+        actualCategoryId, // Use the dynamically mapped category_id
         product.brand,
         product.weight,
         product.dimensions,
