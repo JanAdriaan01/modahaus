@@ -1,5 +1,5 @@
 /// <reference types="vite/client" />
-import axios from 'axios';
+import axios, { AxiosRequestConfig } from 'axios';
 import { useAuthStore } from '@/store/authStore';
 
 const api = axios.create({
@@ -10,22 +10,23 @@ const api = axios.create({
   },
 });
 
-// Attach JWT token from Zustand store
+// Attach JWT token
 api.interceptors.request.use(
-  (config) => {
+  (config: AxiosRequestConfig) => {
     const token = useAuthStore.getState().token;
     if (token) {
+      // Use proper headers typing
       if (!config.headers) {
-        config.headers = {};
+        config.headers = {} as AxiosRequestConfig['headers'];
       }
-      config.headers.Authorization = `Bearer ${token}`;
+      config.headers['Authorization'] = `Bearer ${token}`;
     }
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-// Handle auth errors safely (NO hard redirect)
+// Handle auth errors safely
 api.interceptors.response.use(
   (response) => response,
   (error) => {
