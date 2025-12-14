@@ -19,17 +19,20 @@ export class Database {
     });
   }
 
-  public async init(): Promise<void> {
-    try {
-      await this.pool.connect();
-      console.log('✅ Connected to PostgreSQL database');
-      await this.initTables();
-    } catch (err) {
-      console.error('Error connecting to or initializing database:', err);
-      throw err;
-    }
+public async run(
+  sql: string,
+  params: any[] = []
+): Promise<{ changes: number; lastID: number }> {
+  const client = await this.pool.connect();
+  try {
+    const result: QueryResult<QueryResultRow> = await client.query(sql, params);
+    // Coerce lastID to a number safely
+    const lastID = result.rows[0]?.id ? Number(result.rows[0].id) : 0;
+    return { changes: result.rowCount, lastID };
+  } finally {
+    client.release();
   }
-
+}
   private async initTables(): Promise<void> {
     // Users table
     await this.run(`
