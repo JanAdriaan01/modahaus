@@ -20,7 +20,12 @@ export const authMiddleware = (req: AuthRequest, res: Response, next: NextFuncti
     }
 
     const token = authHeader.substring(7); // Remove 'Bearer ' prefix
-    const jwtSecret = process.env.JWT_SECRET || 'your-secret-key';
+    const jwtSecret = process.env.JWT_SECRET;
+
+    if (!jwtSecret) {
+      console.error('JWT_SECRET is not defined in environment variables.');
+      return res.status(500).json({ error: 'Server configuration error.' });
+    }
 
     const decoded = jwt.verify(token, jwtSecret) as any;
     

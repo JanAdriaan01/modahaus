@@ -5,6 +5,7 @@ import { body, validationResult } from 'express-validator';
 import { Database } from '../config/database';
 import { asyncHandler } from '../middleware/errorHandler';
 import { AuthRequest } from '../middleware/auth';
+import { sendEmail } from '../services/emailService';
 
 // Change to export a function that accepts db
 export default (db: Database) => {
@@ -12,6 +13,10 @@ export default (db: Database) => {
 
 // Generate JWT token
 const generateToken = (user: any) => {
+  const jwtSecret = process.env.JWT_SECRET;
+  if (!jwtSecret) {
+    throw new Error('JWT_SECRET is not defined');
+  }
   return jwt.sign(
     {
       id: user.id,
@@ -20,7 +25,7 @@ const generateToken = (user: any) => {
       lastName: user.last_name,
       isAdmin: user.is_admin
     },
-    process.env.JWT_SECRET || 'your-secret-key',
+    jwtSecret,
     { expiresIn: '30d' }
   );
 };
@@ -56,6 +61,13 @@ router.post('/register', [
   );
 
   const userId = result.lastID;
+
+  // Send welcome email
+  await sendEmail(
+    email,
+    'Welcome to Modahaus!',
+    `<h1>Welcome, ${firstName}!</h1><p>Thank you for registering at Modahaus. We're excited to have you.</p>`
+  );
 
   // Generate token
   const token = generateToken({
@@ -133,7 +145,11 @@ router.get('/profile', asyncHandler(async (req: AuthRequest, res: Response) => {
   }
 
   const token = authHeader.substring(7);
-  const jwtSecret = process.env.JWT_SECRET || 'your-secret-key';
+  const jwtSecret = process.env.JWT_SECRET;
+  if (!jwtSecret) {
+    console.error('JWT_SECRET is not defined in environment variables.');
+    return res.status(500).json({ error: 'Server configuration error.' });
+  }
 
   try {
     const decoded = jwt.verify(token, jwtSecret) as any;
@@ -173,8 +189,11 @@ router.post('/refresh', asyncHandler(async (req: AuthRequest, res: Response) => 
   }
 
   const token = authHeader.substring(7);
-  const jwtSecret = process.env.JWT_SECRET || 'your-secret-key';
-
+  const jwtSecret = process.env.JWT_SECRET;
+  if (!jwtSecret) {
+    console.error('JWT_SECRET is not defined in environment variables.');
+    return res.status(500).json({ error: 'Server configuration error.' });
+  }
   try {
     const decoded = jwt.verify(token, jwtSecret) as any;
     
