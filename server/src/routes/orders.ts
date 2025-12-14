@@ -3,6 +3,8 @@ import { body, validationResult } from 'express-validator';
 import { Database } from '../config/database';
 import { asyncHandler } from '../middleware/errorHandler';
 import { AuthRequest } from '../middleware/auth';
+import { initiateOzowPayment, handleOzowNotification } from '../services/ozowService'; // Add this
+const APP_ORIGIN = process.env.APP_ORIGIN || 'http://localhost:3000'; // Add this for redirect URLs
 
 // Change to export a function that accepts db
 export default (db: Database) => {
@@ -22,7 +24,7 @@ router.post('/', [
   body('items.*.quantity').isInt({ min: 1 }),
   body('shippingAddress').isObject(),
   body('billingAddress').isObject(),
-  body('paymentMethod').isIn(['card', 'paypal', 'bank_transfer']),
+  body('paymentMethod').isIn(['card', 'paypal', 'bank_transfer', 'ozow']),
   body('shippingMethod').isString()
 ], asyncHandler(async (req: AuthRequest, res: Response) => {
   const errors = validationResult(req);
@@ -107,6 +109,45 @@ router.post('/', [
   // Clear user's cart
   await db.run('DELETE FROM cart_items WHERE user_id = ?', [userId]);
 
+  let ozowRedirectUrl: string | undefined;
+  if (paymentMethod === 'ozow') {
+    // Get user details for Ozow payment (assuming user object is available from req.user)
+    const user = req.user!; // We know user is authenticated
+
+    // Define success, cancel, and notify URLs for Ozow
+    // These should ideally be more robust and potentially include orderId
+    const successUrl = `${APP_ORIGIN}/order-success/${orderNumber}`;
+    const cancelUrl = `${APP_ORIGIN}/order-cancel/${orderNumber}`;
+    // The notifyUrl should be an endpoint on your server that Ozow can call
+    const notifyUrl = `${APP_ORIGIN}/api/orders/ozow-webhook`; // This endpoint needs to be created
+
+    const ozowPaymentResult = await initiateOzowPayment(
+      totalAmount,
+      orderNumber, // Use order number as transaction ID for Ozow
+      user.email,
+      successUrl,
+      cancelUrl,
+      notifyUrl
+    );
+
+    if (ozowPaymentResult.success && ozowPaymentResult.redirectUrl) {
+      ozowRedirectUrl = ozowPaymentResult.redirectUrl;
+      // Optionally update order with Ozow transaction ID if returned
+      if (ozowPaymentResult.transactionId) {
+        await db.run(
+          'UPDATE orders SET payment_id = ? WHERE id = ?',
+          [ozowPaymentResult.transactionId, orderId]
+        );
+      }
+      // Do not send 201 response here, send redirect instead
+    } else {
+      // Handle Ozow initiation failure
+      console.error('Failed to initiate Ozow payment:', ozowPaymentResult.error);
+      await db.run('UPDATE orders SET status = ?, payment_status = ? WHERE id = ?', ['failed', 'failed', orderId]);
+      return res.status(500).json({ success: false, error: 'Failed to initiate Ozow payment' });
+    }
+  }
+
   // Get the created order with items
   const order = await db.get(`
     SELECT * FROM orders WHERE id = ?
@@ -116,31 +157,41 @@ router.post('/', [
     SELECT * FROM order_items WHERE order_id = ?
   `, [orderId]);
 
-  res.status(201).json({
-    success: true,
-    message: 'Order created successfully',
-    data: {
-      order: {
-        id: order.id,
-        orderNumber: order.order_number,
-        status: order.status,
-        paymentStatus: order.payment_status,
-        subtotal: parseFloat(order.subtotal),
-        taxAmount: parseFloat(order.tax_amount),
-        shippingAmount: parseFloat(order.shipping_amount),
-        totalAmount: parseFloat(order.total_amount),
-        createdAt: order.created_at,
-        items: orderItems_query.map((item: any) => ({
-          productId: item.product_id,
-          productName: item.product_name,
-          productSku: item.product_sku,
-          quantity: item.quantity,
-          unitPrice: parseFloat(item.unit_price),
-          totalPrice: parseFloat(item.total_price)
-        }))
+  if (ozowRedirectUrl) {
+    // If Ozow payment was initiated, redirect the client
+    return res.json({
+      success: true,
+      message: 'Ozow payment initiated',
+      redirectUrl: ozowRedirectUrl
+    });
+  } else {
+    // For other payment methods, return the order details directly
+    res.status(201).json({
+      success: true,
+      message: 'Order created successfully',
+      data: {
+        order: {
+          id: order.id,
+          orderNumber: order.order_number,
+          status: order.status,
+          paymentStatus: order.payment_status,
+          subtotal: parseFloat(order.subtotal),
+          taxAmount: parseFloat(order.tax_amount),
+          shippingAmount: parseFloat(order.shipping_amount),
+          totalAmount: parseFloat(order.total_amount),
+          createdAt: order.created_at,
+          items: orderItems_query.map((item: any) => ({
+            productId: item.product_id,
+            productName: item.product_name,
+            productSku: item.product_sku,
+            quantity: item.quantity,
+            unitPrice: parseFloat(item.unit_price),
+            totalPrice: parseFloat(item.total_price)
+          }))
+        }
       }
-    }
-  });
+    });
+  }
 }));
 
 // Get user's orders
@@ -328,6 +379,35 @@ router.patch('/:orderId/status', asyncHandler(async (req: AuthRequest, res: Resp
     message: 'Order updated successfully',
     data: { order: updatedOrder }
   });
+}));
+
+// Ozow Webhook for payment notifications
+router.post('/ozow-webhook', asyncHandler(async (req: Request, res: Response) => {
+  const notificationData = req.body;
+  console.log('Received Ozow Webhook Notification:', notificationData);
+
+  const { success, error, message } = await handleOzowNotification(notificationData);
+
+  if (success) {
+    // If successful, update order status in your database
+    // The notificationData should contain a transactionId or orderNumber
+    // that links back to your internal order.
+    // Example: Update order where order_number = notificationData.TransactionId
+    const orderNumber = notificationData.TransactionId; // Assuming Ozow sends this
+    const newPaymentStatus = notificationData.Status === 'Complete' ? 'paid' : 'failed';
+    const newStatus = notificationData.Status === 'Complete' ? 'processing' : 'cancelled';
+
+    // This part needs to be refined based on how you map Ozow status to your order status
+    await db.run(
+      'UPDATE orders SET payment_status = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE order_number = ?',
+      [newPaymentStatus, newStatus, orderNumber]
+    );
+
+    res.status(200).json({ status: 'OK', message: 'Webhook processed' });
+  } else {
+    console.error('Error processing Ozow webhook:', error);
+    res.status(400).json({ status: 'Error', message: error });
+  }
 }));
 
   return router;
