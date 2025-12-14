@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { wishlistService } from '@/services/apiService';
+import { wishlistService } from '@/services/wishlistService';
 import { toast } from 'react-toastify';
 
 export interface WishlistItem {
@@ -31,6 +31,7 @@ interface WishlistState {
   addToWishlist: (productId: number) => Promise<void>;
   removeFromWishlist: (productId: number) => Promise<void>;
   clearWishlist: () => Promise<void>;
+  clearLocalWishlist: () => void;
   moveToCart: (productId: number, quantity?: number) => Promise<void>;
   checkWishlist: (productId: number) => Promise<boolean>;
   refreshWishlist: () => Promise<void>;
@@ -112,6 +113,10 @@ export const useWishlistStore = create<WishlistState>()(
           toast.error(error.response?.data?.error || 'Failed to clear wishlist');
           throw error;
         }
+      },
+
+      clearLocalWishlist: () => {
+        set({ items: [] });
       },
 
       moveToCart: async (productId: number, quantity: number = 1) => {

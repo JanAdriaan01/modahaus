@@ -2,6 +2,7 @@ import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { useCartStore } from '@/store/cartStore';
+import { useWishlistStore } from '@/store/wishlistStore';
 
 // Layout Components
 import Header from '@/components/layout/Header';
@@ -29,14 +30,24 @@ import ProtectedRoute from '@/components/common/ProtectedRoute';
 function App() {
   const { user, initializeAuth } = useAuthStore();
   const { loadCart } = useCartStore();
+  const { loadWishlist } = useWishlistStore();
 
-  // Initialize authentication and cart on app start
+  // Initialize authentication on app start
   React.useEffect(() => {
-    initializeAuth();
-    if (user) {
+    const initApp = async () => {
+      await initializeAuth(); // Ensure auth state is fully loaded
+    };
+    initApp();
+  }, [initializeAuth]);
+
+  // Load cart and wishlist once user is authenticated
+  React.useEffect(() => {
+    const currentUser = useAuthStore.getState().user;
+    if (currentUser) {
       loadCart();
+      loadWishlist();
     }
-  }, [user, initializeAuth, loadCart]);
+  }, [user, loadCart, loadWishlist]);
 
   return (
     <div className="min-h-screen flex flex-col bg-neutral-100">

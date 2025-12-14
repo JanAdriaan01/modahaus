@@ -4,7 +4,7 @@ import { Search, ShoppingCart, Heart, User, Menu, X } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useCartStore } from '@/store/cartStore';
 import { useWishlistStore } from '@/store/wishlistStore';
-import { categoriesService } from '@/services/apiService';
+import { categoriesService } from '@/services/categoriesService';
 
 interface Category {
   id: number;
@@ -21,22 +21,19 @@ const Header: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
   const { summary: cartSummary } = useCartStore();
-  const { items: wishlistItems } = useWishlistStore();
+  const { items: wishlistItems } = useWishlistStore() || { items: [] };
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [categories, setCategories] = useState<Category[]>([]);
-  const [isCategoriesLoading, setIsCategoriesLoading] = useState(true);
 
   // Load categories
   React.useEffect(() => {
     const loadCategories = async () => {
       try {
         const response = await categoriesService.getCategories();
-        setCategories(response.categories);
+        setCategories(response.data.categories);
       } catch (error) {
         console.error('Failed to load categories:', error);
-      } finally {
-        setIsCategoriesLoading(false);
       }
     };
 
@@ -118,7 +115,10 @@ const Header: React.FC = () => {
           {/* Search Bar */}
           <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-md mx-8">
             <div className="relative w-full">
+              <label htmlFor="desktop-search" className="sr-only">Search products</label>
               <input
+                id="desktop-search"
+                name="desktop-search"
                 type="text"
                 placeholder="Search products..."
                 value={searchQuery}
@@ -134,6 +134,7 @@ const Header: React.FC = () => {
             {/* Wishlist */}
             <Link
               to="/wishlist"
+              aria-label="Wishlist"
               className="relative p-2 text-neutral-700 hover:text-primary-500 transition-colors duration-200"
             >
               <Heart className="w-6 h-6" />
@@ -147,6 +148,7 @@ const Header: React.FC = () => {
             {/* Cart */}
             <Link
               to="/cart"
+              aria-label="Shopping Cart"
               className="relative p-2 text-neutral-700 hover:text-primary-500 transition-colors duration-200"
             >
               <ShoppingCart className="w-6 h-6" />
@@ -160,7 +162,9 @@ const Header: React.FC = () => {
             {/* User Menu */}
             {user ? (
               <div className="relative group">
-                <button className="flex items-center space-x-2 p-2 text-neutral-700 hover:text-primary-500 transition-colors duration-200">
+                <button 
+                  aria-label={`Open ${user.firstName}'s menu`}
+                  className="flex items-center space-x-2 p-2 text-neutral-700 hover:text-primary-500 transition-colors duration-200">
                   <User className="w-6 h-6" />
                   <span className="hidden md:block font-medium">
                     {user.firstName}
@@ -213,6 +217,7 @@ const Header: React.FC = () => {
             {/* Mobile Menu Button */}
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
+              aria-label={isMenuOpen ? 'Close main menu' : 'Open main menu'}
               className="lg:hidden p-2 text-neutral-700 hover:text-primary-500 transition-colors duration-200"
             >
               {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -228,7 +233,10 @@ const Header: React.FC = () => {
             {/* Mobile Search */}
             <form onSubmit={handleSearch} className="mb-4">
               <div className="relative">
+                <label htmlFor="mobile-search" className="sr-only">Search products</label>
                 <input
+                  id="mobile-search"
+                  name="mobile-search"
                   type="text"
                   placeholder="Search products..."
                   value={searchQuery}

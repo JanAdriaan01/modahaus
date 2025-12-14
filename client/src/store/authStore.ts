@@ -2,27 +2,15 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { authService } from '@/services/authService';
 import { toast } from 'react-toastify';
+import { useCartStore } from './cartStore';
+import { useWishlistStore } from './wishlistStore';
 
 export interface User {
   id: number;
   email: string;
   firstName: string;
-  lastName: string;
+  lastName:string;
   isAdmin: boolean;
-}
-
-interface AuthState {
-  user: User | null;
-  token: string | null;
-  isLoading: boolean;
-  isInitialized: boolean;
-  
-  // Actions
-  login: (email: string, password: string) => Promise<void>;
-  register: (userData: RegisterData) => Promise<void>;
-  logout: () => void;
-  updateProfile: (data: Partial<User>) => Promise<void>;
-  initializeAuth: () => Promise<void>;
 }
 
 interface RegisterData {
@@ -33,6 +21,19 @@ interface RegisterData {
   phone?: string;
 }
 
+interface AuthState {
+  user: User | null;
+  token: string | null;
+  isLoading: boolean;
+  isInitialized: boolean;
+
+  login: (email: string, password: string) => Promise<void>;
+  register: (data: RegisterData) => Promise<void>;
+  logout: () => void;
+  updateProfile: (data: Partial<User>) => Promise<void>;
+  initializeAuth: () => Promise<void>;
+}
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
@@ -41,93 +42,93 @@ export const useAuthStore = create<AuthState>()(
       isLoading: false,
       isInitialized: false,
 
-      login: async (email: string, password: string) => {
+      login: async (email, password) => {
         try {
           set({ isLoading: true });
+
           const response = await authService.login(email, password);
-          
+
           set({
             user: response.user,
             token: response.token,
             isLoading: false,
           });
-          
-          toast.success('Login successful!');
+
+          toast.success('Login successful');
         } catch (error: any) {
           set({ isLoading: false });
           toast.error(error.response?.data?.error || 'Login failed');
-          throw error;
         }
       },
 
-      register: async (userData: RegisterData) => {
+      register: async (data) => {
         try {
           set({ isLoading: true });
-          const response = await authService.register(userData);
-          
+
+          const response = await authService.register(data);
+
           set({
             user: response.user,
             token: response.token,
             isLoading: false,
           });
-          
-          toast.success('Registration successful!');
+
+          toast.success('Registration successful');
         } catch (error: any) {
           set({ isLoading: false });
           toast.error(error.response?.data?.error || 'Registration failed');
-          throw error;
         }
       },
 
       logout: () => {
-        set({
-          user: null,
-          token: null,
-        });
+        set({ user: null, token: null });
+        useCartStore.getState().clearLocalCart();
+        useWishlistStore.getState().clearLocalWishlist();
         toast.success('Logged out successfully');
       },
 
-      updateProfile: async (data: Partial<User>) => {
+      updateProfile: async (data) => {
         try {
           set({ isLoading: true });
+
           const response = await authService.updateProfile(data);
-          
+
           set({
             user: { ...get().user!, ...response.user },
             isLoading: false,
           });
-          
-          toast.success('Profile updated successfully');
+
+          toast.success('Profile updated');
         } catch (error: any) {
           set({ isLoading: false });
-          toast.error(error.response?.data?.error || 'Profile update failed');
-          throw error;
+          toast.error(error.response?.data?.error || 'Failed to update profile');
         }
       },
 
       initializeAuth: async () => {
-        try {
-          const token = get().token;
-          if (!token) {
-            set({ isInitialized: true });
-            return;
-          }
+        const token = get().token;
 
+        if (!token) {
+          set({ isInitialized: true });
+          return;
+        }
+
+        try {
           set({ isLoading: true });
+
           const response = await authService.getProfile();
-          
+
           set({
             user: response.user,
             isLoading: false,
             isInitialized: true,
           });
-        } catch (error) {
-          // Token is invalid, clear auth state
+        } catch {
           set({
             user: null,
             token: null,
-            isLoading: false,
             isInitialized: true,
+            isLoading: false,
           });
         }
       },
@@ -135,8 +136,8 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'modahaus-auth',
       partialize: (state) => ({
-        user: state.user,
         token: state.token,
+        user: state.user,
       }),
     }
   )

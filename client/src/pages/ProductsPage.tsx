@@ -1,9 +1,9 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { productsService } from '@/services/apiService';
-import ProductCard from '@/components/product/ProductCard';
+import { productsService } from '@/services/productsService';
+import ProductCard, { Product } from '@/components/product/ProductCard';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
-import { Filter, Grid, List, Search, SlidersHorizontal } from 'lucide-react';
+import { Grid, List, Search } from 'lucide-react';
 
 const ProductsPage: React.FC = () => {
   const [viewMode, setViewMode] = React.useState<'grid' | 'list'>('grid');
@@ -22,7 +22,7 @@ const ProductsPage: React.FC = () => {
     }),
   });
 
-  const products = data?.products || [];
+  const products = data?.data?.products || [];
 
   return (
     <div className="min-h-screen bg-neutral-100">
@@ -46,7 +46,10 @@ const ProductsPage: React.FC = () => {
             <div>
               <h3 className="font-semibold text-neutral-900 mb-3">Search</h3>
               <div className="relative">
+                <label htmlFor="product-search" className="sr-only">Search products</label>
                 <input
+                  id="product-search"
+                  name="product-search"
                   type="text"
                   placeholder="Search products..."
                   value={searchQuery}
@@ -118,20 +121,20 @@ const ProductsPage: React.FC = () => {
             <div>
               <h3 className="font-semibold text-neutral-900 mb-3">Price Range</h3>
               <div className="space-y-3">
-                <label className="flex items-center">
-                  <input type="checkbox" className="rounded border-neutral-300 text-primary-500 focus:ring-primary-500" />
+                <label htmlFor="price-under-100" className="flex items-center">
+                  <input id="price-under-100" name="price-range" type="checkbox" className="rounded border-neutral-300 text-primary-500 focus:ring-primary-500" />
                   <span className="ml-2 text-sm text-neutral-600">Under $100</span>
                 </label>
-                <label className="flex items-center">
-                  <input type="checkbox" className="rounded border-neutral-300 text-primary-500 focus:ring-primary-500" />
+                <label htmlFor="price-100-500" className="flex items-center">
+                  <input id="price-100-500" name="price-range" type="checkbox" className="rounded border-neutral-300 text-primary-500 focus:ring-primary-500" />
                   <span className="ml-2 text-sm text-neutral-600">$100 - $500</span>
                 </label>
-                <label className="flex items-center">
-                  <input type="checkbox" className="rounded border-neutral-300 text-primary-500 focus:ring-primary-500" />
+                <label htmlFor="price-500-1000" className="flex items-center">
+                  <input id="price-500-1000" name="price-range" type="checkbox" className="rounded border-neutral-300 text-primary-500 focus:ring-primary-500" />
                   <span className="ml-2 text-sm text-neutral-600">$500 - $1,000</span>
                 </label>
-                <label className="flex items-center">
-                  <input type="checkbox" className="rounded border-neutral-300 text-primary-500 focus:ring-primary-500" />
+                <label htmlFor="price-over-1000" className="flex items-center">
+                  <input id="price-over-1000" name="price-range" type="checkbox" className="rounded border-neutral-300 text-primary-500 focus:ring-primary-500" />
                   <span className="ml-2 text-sm text-neutral-600">Over $1,000</span>
                 </label>
               </div>
@@ -151,7 +154,9 @@ const ProductsPage: React.FC = () => {
                 
                 <div className="flex items-center space-x-4">
                   {/* Sort Dropdown */}
+                  <label htmlFor="sort-by" className="sr-only">Sort by</label>
                   <select
+                    id="sort-by"
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value)}
                     className="border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
@@ -168,12 +173,14 @@ const ProductsPage: React.FC = () => {
                   <div className="flex border border-neutral-300 rounded-lg overflow-hidden">
                     <button
                       onClick={() => setViewMode('grid')}
+                      aria-label="Switch to grid view"
                       className={`p-2 ${viewMode === 'grid' ? 'bg-primary-500 text-white' : 'text-neutral-600 hover:bg-neutral-100'}`}
                     >
                       <Grid className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => setViewMode('list')}
+                      aria-label="Switch to list view"
                       className={`p-2 ${viewMode === 'list' ? 'bg-primary-500 text-white' : 'text-neutral-600 hover:bg-neutral-100'}`}
                     >
                       <List className="w-4 h-4" />
@@ -202,7 +209,7 @@ const ProductsPage: React.FC = () => {
                   ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'
                   : 'space-y-4'
               }>
-                {products.map((product) => (
+                {products.map((product: Product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
               </div>

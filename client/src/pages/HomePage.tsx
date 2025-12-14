@@ -2,8 +2,8 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Star, Truck, Shield, RotateCcw, Headphones } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { productsService } from '@/services/apiService';
-import ProductCard from '@/components/product/ProductCard';
+import { productsService } from '@/services/productsService';
+import ProductCard, { Product } from '@/components/product/ProductCard';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 
 const HomePage: React.FC = () => {
@@ -13,7 +13,7 @@ const HomePage: React.FC = () => {
     queryFn: () => productsService.getFeaturedProducts(8),
   });
 
-  const featuredProducts = featuredData?.products || [];
+  const featuredProducts = featuredData?.data?.products || [];
 
   return (
     <div className="min-h-screen">
@@ -219,7 +219,7 @@ const HomePage: React.FC = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {featuredProducts.map((product) => (
+              {featuredProducts.map((product: Product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
             </div>
@@ -248,7 +248,10 @@ const HomePage: React.FC = () => {
               Subscribe to our newsletter for the latest collections, design tips, and exclusive offers.
             </p>
             <form className="max-w-md mx-auto flex">
+              <label htmlFor="newsletter-email-home" className="sr-only">Enter your email address</label>
               <input
+                id="newsletter-email-home"
+                name="newsletter-email"
                 type="email"
                 placeholder="Enter your email address"
                 className="flex-1 px-4 py-3 rounded-l-lg border-0 focus:outline-none focus:ring-2 focus:ring-white/20"
