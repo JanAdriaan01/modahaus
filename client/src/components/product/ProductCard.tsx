@@ -29,12 +29,13 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const navigate = useNavigate();
 
   const { user } = useAuthStore();
-  const { addToCart } = useCartStore(); 
+  const { addToCart } = useCartStore();
   const { items: wishlistItems, addToWishlist, removeFromWishlist } = useWishlistStore() || { items: [] };
 
+  // Local loading state per card
   const [isAdding, setIsAdding] = useState(false);
 
-  const isInWishlist = wishlistItems.some(item => item.productId === product.id);
+  const isInWishlist = wishlistItems?.some(item => item.productId === product.id) ?? false;
 
   const hasDiscount =
     product.compareAtPrice && product.compareAtPrice > product.price;
@@ -57,6 +58,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     e.preventDefault();
     e.stopPropagation();
 
+    if (!user) return;
+
     try {
       setIsAdding(true);
       await addToCart(product.id, 1);
@@ -69,6 +72,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     e.preventDefault();
     e.stopPropagation();
 
+    if (!user) return;
+
     try {
       if (isInWishlist) {
         await removeFromWishlist(product.id);
@@ -76,7 +81,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         await addToWishlist(product.id);
       }
     } catch {
-      /* Errors handled in store */
+      // errors handled by store
     }
   };
 
@@ -85,6 +90,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       className="group relative bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden cursor-pointer"
       onClick={handleCardClick}
     >
+      {/* Product Image */}
       <div className="aspect-square relative overflow-hidden bg-neutral-100">
         {product.primaryImage ? (
           <img
@@ -99,6 +105,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           </div>
         )}
 
+        {/* Discount Badge */}
         {hasDiscount && (
           <div className="absolute top-3 left-3">
             <span className="bg-error text-white text-xs font-bold px-2 py-1 rounded">
@@ -107,6 +114,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           </div>
         )}
 
+        {/* Wishlist Button */}
         <button
           onClick={handleWishlistToggle}
           disabled={!user}
@@ -118,6 +126,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           />
         </button>
 
+        {/* Quick Add to Cart */}
         <button
           onClick={handleAddToCart}
           disabled={isAdding || !user}
@@ -137,6 +146,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         </button>
       </div>
 
+      {/* Product Info */}
       <div className="p-4 space-y-2">
         <div className="flex items-center justify-between">
           <span className="text-xs text-neutral-500 uppercase tracking-wide font-medium">
@@ -154,14 +164,20 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         </h3>
 
         {product.shortDescription && (
-          <p className="text-sm text-neutral-600 line-clamp-2">{product.shortDescription}</p>
+          <p className="text-sm text-neutral-600 line-clamp-2">
+            {product.shortDescription}
+          </p>
         )}
 
         <div className="flex items-center justify-between pt-2">
           <div className="flex items-center space-x-2">
-            <span className="text-lg font-bold text-neutral-900">${product.price.toFixed(2)}</span>
+            <span className="text-lg font-bold text-neutral-900">
+              ${product.price.toFixed(2)}
+            </span>
             {hasDiscount && (
-              <span className="text-sm text-neutral-400 line-through">${product.compareAtPrice?.toFixed(2)}</span>
+              <span className="text-sm text-neutral-400 line-through">
+                ${product.compareAtPrice?.toFixed(2)}
+              </span>
             )}
           </div>
         </div>
