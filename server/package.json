@@ -7,7 +7,9 @@
     "dev": "nodemon src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "seed": "ts-node src/scripts/seedDatabase.ts"
+    "seed": "ts-node src/scripts/seedDatabase.ts",
+    "lint": "eslint src/**/*.ts",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "@types/pg": "^8.16.0",
@@ -36,8 +38,22 @@
     "@types/multer": "^1.4.11",
     "@types/node": "^20.10.4",
     "@types/uuid": "^9.0.7",
+    "@typescript-eslint/eslint-plugin": "^6.15.0",
+    "@typescript-eslint/parser": "^6.15.0",
+    "eslint": "^8.56.0",
     "nodemon": "^3.0.2",
     "ts-node": "^10.9.1",
     "typescript": "^5.3.3"
-  }
-}
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "ecommerce",
+    "api",
+    "express",
+    "postgresql",
+    "typescript"
+  ],
+  "author": "Modahaus Team",
+  "license": "MIT"

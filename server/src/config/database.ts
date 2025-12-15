@@ -1,32 +1,43 @@
+// src/config/database.ts
 import { Pool, QueryResult, QueryResultRow } from 'pg';
-import path from 'path';
 
 export class Database {
   private pool: Pool;
 
   constructor() {
+    // Check for required environment variables
+    if (!process.env.DATABASE_URL) {
+      throw new Error('DATABASE_URL environment variable is required');
+    }
+
     this.pool = new Pool({
       connectionString: process.env.DATABASE_URL,
-      ssl:
-        process.env.NODE_ENV === 'production'
-          ? { rejectUnauthorized: false }
-          : false, // Required for Neon in production
+      ssl: {
+        rejectUnauthorized: false, // Required for Neon
+      },
+      // Critical for serverless deployment
+      max: 1, // Limit to 1 connection for serverless
+      min: 0,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 2000,
     });
 
     this.pool.on('error', (err) => {
       console.error('Unexpected error on idle client', err);
-      process.exit(-1);
+      // Don't exit in serverless environment
     });
   }
 
   public async init(): Promise<void> {
     try {
-      await this.pool.connect();
+      const client = await this.pool.connect();
+      await client.query('SELECT 1'); // Test connection
+      client.release();
       console.log('✅ Connected to PostgreSQL database');
       await this.initTables();
     } catch (err) {
-      console.error('Error connecting to or initializing database:', err);
-      throw err;
+      console.error('Error connecting to database:', err);
+      throw new Error(`Database connection failed: ${err.message}`);
     }
   }
 
@@ -248,10 +259,9 @@ export class Database {
       )
     `);
 
-    console.log('✅ Database tables created successfully');
+    console.log('✅ PostgreSQL database tables created successfully');
   }
 
-  /** INSERT/UPDATE/DELETE */
   public async run(
     sql: string,
     params: any[] = []
@@ -260,7 +270,6 @@ export class Database {
     try {
       const result: QueryResult<QueryResultRow> = await client.query(sql, params);
       
-      // Fix: Ensure lastID is always a number, not null
       const firstRow = result.rows[0];
       const lastID = firstRow && typeof firstRow.id === 'number' ? firstRow.id : 0;
       
@@ -270,12 +279,10 @@ export class Database {
     }
   }
 
-  /** Fetch single row */
   public async get<T = any>(sql: string, params: any[] = []): Promise<T | undefined> {
     const client = await this.pool.connect();
     try {
       const result: QueryResult<QueryResultRow> = await client.query(sql, params);
-      // Fix: Properly handle the type conversion
       const row = result.rows[0];
       return row ? row as unknown as T : undefined;
     } finally {
@@ -283,12 +290,10 @@ export class Database {
     }
   }
 
-  /** Fetch multiple rows */
   public async all<T = any>(sql: string, params: any[] = []): Promise<T[]> {
     const client = await this.pool.connect();
     try {
       const result: QueryResult<QueryResultRow> = await client.query(sql, params);
-      // Fix: Properly handle the type conversion
       return result.rows as unknown as T[];
     } finally {
       client.release();
@@ -300,3 +305,6 @@ export class Database {
     console.log('🔒 Database connection pool closed');
   }
 }
+
+// Export singleton instance
+export const database = new Database();
