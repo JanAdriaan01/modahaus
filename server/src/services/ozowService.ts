@@ -1,11 +1,10 @@
-// modahaus/server/src/services/ozowService.ts
-
+// src/services/ozowService.ts
 import crypto from 'crypto';
 import axios from 'axios';
 
-const OZOW_PRIVATE_KEY = process.env.OZOW_PRIVATE_KEY || 'your_ozow_private_key';
-const OZOW_API_KEY = process.env.OZOW_API_KEY || 'your_ozow_api_key';
-const OZOW_MERCHANT_CODE = process.env.OZOW_MERCHANT_ID || 'your_ozow_merchant_id';
+const OZOW_PRIVATE_KEY = process.env['OZOW_PRIVATE_KEY'] || 'your_ozow_private_key';
+const OZOW_API_KEY = process.env['OZOW_API_KEY'] || 'your_ozow_api_key';
+const OZOW_MERCHANT_CODE = process.env['OZOW_MERCHANT_ID'] || 'your_ozow_merchant_id';
 
 // Base URL for Ozow API (this might need to be adjusted based on environment/docs)
 const OZOW_API_BASE_URL = 'https://api.ozow.com'; // Placeholder, verify with Ozow docs
@@ -36,7 +35,7 @@ export const initiateOzowPayment = async (
       successUrl: successUrl,
       cancelUrl: cancelUrl,
       notifyUrl: notifyUrl,
-      isTest: process.env.NODE_ENV !== 'production' // Use test mode in development
+      isTest: process.env['NODE_ENV'] !== 'production' // Use test mode in development
     };
 
     // Construct the string to hash (refer to Ozow API documentation for exact order and fields)

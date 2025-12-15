@@ -1,7 +1,8 @@
+// src/services/emailService.ts
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-const EMAIL_FROM = process.env.EMAIL_FROM || 'onboarding@resend.dev'; // Default from Resend
+const resend = new Resend(process.env['RESEND_API_KEY'] || '');
+const EMAIL_FROM = process.env['EMAIL_FROM'] || 'onboarding@resend.dev'; // Default from Resend
 
 export const sendEmail = async (to: string, subject: string, html: string, text?: string) => {
   try {
@@ -10,7 +11,7 @@ export const sendEmail = async (to: string, subject: string, html: string, text?
       to: [to],
       subject: subject,
       html: html,
-      text: text, // Optional plaintext version
+      text: text || undefined, // Handle optional text parameter
     });
 
     if (error) {

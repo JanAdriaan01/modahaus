@@ -1,3 +1,4 @@
+// src/scripts/seedDatabase.ts
 import { Database } from '../config/database';
 
 const db = new Database();
@@ -120,8 +121,8 @@ const sampleProducts = [
   // Living Room Furniture
   {
     name: 'Modern Sectional Sofa',
-    slug: 'modern-sectional-sofa',
-    description: 'Comfortable and stylish sectional sofa perfect for modern living rooms. Upholstered in premium fabric with sturdy hardwood frame construction.',
+    slug: 'modern    description: '-sectional-sofa',
+Comfortable and stylish sectional sofa perfect for modern living rooms. Upholstered in premium fabric with sturdy hardwood frame construction.',
     short_description: 'Comfortable sectional sofa with premium fabric upholstery',
     sku: 'MS-SOFA-001',
     price: 1299.99,
@@ -446,24 +447,28 @@ async function seedDatabase() {
 
     // Insert subcategories, updating parent_id using the map
     for (const category of subCategories) {
-      const parentCategory = sampleCategories[category.parent_id! -1]; // Get original parent category object
-      const actualParentId = categoryIdMap[parentCategory.slug]; // Get the actual ID from the DB
+      const parentIndex = category.parent_id! - 1; // Get original parent category index
+      const parentCategory = sampleCategories[parentIndex]; // Get original parent category object
+      
+      if (parentCategory) { // Add null check
+        const actualParentId = categoryIdMap[parentCategory.slug]; // Get the actual ID from the DB
 
-      const result = await db.run(`
-        INSERT INTO categories (name, slug, description, parent_id, image_url, sort_order)
-        VALUES ($1, $2, $3, $4, $5, $6)
-        RETURNING id
-      `, [
-        category.name,
-        category.slug,
-        category.description,
-        actualParentId,
-        category.image_url,
-        category.sort_order
-      ]);
-      categoryIdMap[category.slug] = result.lastID;
-      // Also map original index to new ID for products
-      productCategoryIdMap[sampleCategories.indexOf(category)] = result.lastID;
+        const result = await db.run(`
+          INSERT INTO categories (name, slug, description, parent_id, image_url, sort_order)
+          VALUES ($1, $2, $3, $4, $5, $6)
+          RETURNING id
+        `, [
+          category.name,
+          category.slug,
+          category.description,
+          actualParentId,
+          category.image_url,
+          category.sort_order
+        ]);
+        categoryIdMap[category.slug] = result.lastID;
+        // Also map original index to new ID for products
+        productCategoryIdMap[sampleCategories.indexOf(category)] = result.lastID;
+      }
     }
     console.log(`✅ Inserted ${sampleCategories.length} categories`);
 
@@ -471,7 +476,7 @@ async function seedDatabase() {
     console.log('🛍️ Inserting products...');
     for (const product of sampleProducts) {
       // Use the mapped category_id
-      const actualCategoryId = productCategoryIdMap[product.category_id! -1];
+      const actualCategoryId = productCategoryIdMap[product.category_id! - 1];
       const result = await db.run(`
         INSERT INTO products (
           name, slug, description, short_description, sku, price, compare_at_price,
