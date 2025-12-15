@@ -121,8 +121,8 @@ const sampleProducts = [
   // Living Room Furniture
   {
     name: 'Modern Sectional Sofa',
-    slug: 'modern    description: '-sectional-sofa',
-Comfortable and stylish sectional sofa perfect for modern living rooms. Upholstered in premium fabric with sturdy hardwood frame construction.',
+    slug: 'modern-sectional-sofa',
+    description: 'Comfortable and stylish sectional sofa perfect for modern living rooms. Upholstered in premium fabric with sturdy hardwood frame construction.',
     short_description: 'Comfortable sectional sofa with premium fabric upholstery',
     sku: 'MS-SOFA-001',
     price: 1299.99,
