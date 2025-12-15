@@ -1,14 +1,13 @@
-// Simple Express.js server for Vercel
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
+// Simple Express.js server for Vercel (Fixed TypeScript version)
+import express from 'express';
+import cors from 'cors';
 
 const app = express();
 
 // Middleware
 app.use(cors({
   origin: [
-    process.env.APP_ORIGIN || 'https://www.modahaus.co.za',
+    process.env['APP_ORIGIN'] || 'https://www.modahaus.co.za',
     'http://localhost:3000'
   ].filter(Boolean),
   credentials: true,
@@ -19,28 +18,28 @@ app.use(cors({
 app.use(express.json());
 
 // Health check
-app.get('/health', (req, res) => {
+app.get('/health', (_req: express.Request, res: express.Response) => {
   res.json({
     status: 'OK',
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development',
-    database: process.env.DATABASE_URL ? 'Configured' : 'Missing',
-    appOrigin: process.env.APP_ORIGIN || 'https://www.modahaus.co.za'
+    environment: process.env['NODE_ENV'] || 'development',
+    database: process.env['DATABASE_URL'] ? 'Configured' : 'Missing',
+    appOrigin: process.env['APP_ORIGIN'] || 'https://www.modahaus.co.za'
   });
 });
 
 // Simple API test
-app.get('/api/test', (req, res) => {
+app.get('/api/test', (_req: express.Request, res: express.Response) => {
   res.json({
     success: true,
     message: 'API is working!',
     timestamp: new Date().toISOString(),
     env: {
-      nodeEnv: process.env.NODE_ENV,
-      appOrigin: process.env.APP_ORIGIN,
-      databaseUrl: process.env.DATABASE_URL ? 'Set' : 'Missing'
+      nodeEnv: process.env['NODE_ENV'],
+      appOrigin: process.env['APP_ORIGIN'],
+      databaseUrl: process.env['DATABASE_URL'] ? 'Set' : 'Missing'
     }
   });
 });
 
-module.exports = app;
+export default app;
