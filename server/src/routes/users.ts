@@ -204,7 +204,7 @@ router.post('/addresses', authenticateToken, [
 
 // Update address
 router.put('/addresses/:id', authenticateToken, [
-  body('isIn(['billingtype').optional().', 'shipping']),
+  body('type').isIn(['billing', 'shipping']),
   body('firstName').optional().trim().notEmpty(),
   body('lastName').optional().trim().notEmpty(),
   body('addressLine1').optional().trim().notEmpty(),
